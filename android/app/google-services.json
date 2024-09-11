@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "352349753213",
+    "project_id": "nephrologyhemo",
+    "storage_bucket": "nephrologyhemo.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:352349753213:android:46923b9dc5fab7be130614",
+        "android_client_info": {
+          "package_name": "com.example.nephrohemo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDmQ7BaetkGiZ0Ebh6qPpdBbAvpgSYxg3k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
