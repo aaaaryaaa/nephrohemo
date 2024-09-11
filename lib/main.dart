@@ -13,7 +13,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   print('Initializing Firebase...');
   try {
-    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform);
     print('Firebase Initialized');
   } catch (e) {
     print('Error initializing Firebase: $e');
@@ -31,7 +32,8 @@ class MyApp extends StatelessWidget {
           buttonColor: Colors.blueAccent,
           textTheme: ButtonTextTheme.primary,
         ),
-        colorScheme: ColorScheme.fromSwatch(primarySwatch: Colors.blue).copyWith(secondary: Colors.teal),
+        colorScheme: ColorScheme.fromSwatch(primarySwatch: Colors.blue)
+            .copyWith(secondary: Colors.teal),
       ),
       home: home_screen(),
     );
@@ -42,7 +44,7 @@ class home_screen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2,
+      length: 3, // Updated length
       child: Scaffold(
         appBar: AppBar(
           title: Text('Hemodia'),
@@ -50,6 +52,7 @@ class home_screen extends StatelessWidget {
             tabs: [
               Tab(text: 'Dashboard'),
               Tab(text: 'Schedule'),
+              Tab(text: 'Patients'), // New Tab
             ],
           ),
         ),
@@ -57,6 +60,7 @@ class home_screen extends StatelessWidget {
           children: [
             DashboardScreen(),
             ScheduleScreen(),
+            PatientList(), // New Widget
           ],
         ),
       ),
@@ -124,19 +128,34 @@ class _DashboardViewState extends State<DashboardView> {
   FirestoreService _firestoreService = FirestoreService();
   List<Map<String, dynamic>> availableMachines = [];
   List<Map<String, dynamic>> nonAvailableMachines = [];
+  List<String> scheduledMachineIds = [];
 
   @override
   void initState() {
     super.initState();
-    _listenToMachineChanges(); // Use a real-time listener
+    _listenToMachineChanges();
+    _listenToScheduledMachines(); // Add this line
   }
 
-  // Real-time listener for machine changes
   void _listenToMachineChanges() {
     _firestoreService.listenToMachines().listen((machines) {
       setState(() {
-        availableMachines = machines.where((m) => m['available'] == true).toList();
-        nonAvailableMachines = machines.where((m) => m['available'] == false).toList();
+        availableMachines =
+            machines.where((m) => m['available'] == true).toList();
+        nonAvailableMachines =
+            machines.where((m) => m['available'] == false).toList();
+      });
+    });
+  }
+
+  void _listenToScheduledMachines() {
+    _firestoreService
+        .listenToScheduledMachines()
+        .listen((List<dynamic> machines) {
+      setState(() {
+        // Ensure you are extracting the 'machineId' field correctly.
+        scheduledMachineIds =
+            machines.map((dynamic m) => m['machineId'] as String).toList();
       });
     });
   }
@@ -148,42 +167,95 @@ class _DashboardViewState extends State<DashboardView> {
       children: [
         Text(
           'Available Machines: ${availableMachines.length}',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green),
+          style: TextStyle(
+              fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green),
         ),
         SizedBox(height: 10),
-        _buildMachineList(availableMachines, true), // Display available machines
+        _buildMachineList(
+            availableMachines, true), // Display available machines
 
-        SizedBox(height: 20), // Separation between available and non-available
+        SizedBox(height: 20),
 
         Text(
           'Non-Available Machines: ${nonAvailableMachines.length}',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red),
+          style: TextStyle(
+              fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red),
         ),
         SizedBox(height: 10),
-        _buildMachineList(nonAvailableMachines, false), // Display non-available machines
+        _buildMachineList(
+            nonAvailableMachines, false), // Display non-available machines
       ],
     );
   }
 
-  Widget _buildMachineList(List<Map<String, dynamic>> machines, bool isAvailable) {
+  void _confirmDelete(String machineId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Confirm Delete'),
+        content: Text('Are you sure you want to delete this machine?'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // Close the dialog
+              _deleteMachine(machineId); // Proceed with deletion
+            },
+            child: Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // Close the dialog
+            },
+            child: Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _deleteMachine(String id) async {
+    await _firestoreService.deleteMachine(id);
+  }
+
+  Widget _buildMachineList(
+      List<Map<String, dynamic>> machines, bool isAvailable) {
     return machines.isNotEmpty
         ? ListView.builder(
             shrinkWrap: true,
             physics: NeverScrollableScrollPhysics(),
             itemCount: machines.length,
             itemBuilder: (context, index) {
+              bool isScheduled =
+                  scheduledMachineIds.contains(machines[index]['id']);
               return Card(
                 elevation: 3,
                 margin: EdgeInsets.symmetric(vertical: 8),
                 child: ListTile(
-                  leading: Icon(Icons.local_hospital, color: isAvailable ? Colors.teal : Colors.grey),
-                  title: Text('${machines[index]['name']} - ${machines[index]['location']}'),
-                  trailing: Switch(
-                    value: isAvailable,
-                    onChanged: (value) => _toggleAvailability(machines[index]['id'], isAvailable),
-                    activeColor: Colors.green,
-                    inactiveThumbColor: Colors.red,
+                  leading: Icon(
+                    Icons.local_hospital,
+                    color: isAvailable ? Colors.teal : Colors.grey,
                   ),
+                  title: Text(
+                      '${machines[index]['name']} - ${machines[index]['location']}'),
+                  trailing: isScheduled
+                      ? Text('Scheduled', style: TextStyle(color: Colors.red))
+                      : Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: Icon(Icons.delete, color: Colors.red),
+                              onPressed: () =>
+                                  _confirmDelete(machines[index]['id']),
+                            ),
+                            Switch(
+                              value: isAvailable,
+                              onChanged: (value) => _toggleAvailability(
+                                  machines[index]['id'], isAvailable),
+                              activeColor: Colors.green,
+                              inactiveThumbColor: Colors.red,
+                            ),
+                          ],
+                        ),
                 ),
               );
             },
@@ -191,13 +263,14 @@ class _DashboardViewState extends State<DashboardView> {
         : Center(child: Text('No machines found.'));
   }
 
-  // Toggle availability of a machine
   void _toggleAvailability(String id, bool isCurrentlyAvailable) async {
-    await _firestoreService.updateMachineAvailability(id, !isCurrentlyAvailable);
+    if (scheduledMachineIds.contains(id)) {
+      return; // Do not allow toggling if the machine is scheduled
+    }
+    await _firestoreService.updateMachineAvailability(
+        id, !isCurrentlyAvailable);
   }
 }
-
-
 
 class AddMachine extends StatefulWidget {
   @override
@@ -333,7 +406,8 @@ class ScheduleMachineView extends StatefulWidget {
 class _ScheduleMachineViewState extends State<ScheduleMachineView> {
   final FirestoreService _firestoreService = FirestoreService();
   final TextEditingController _patientNameController = TextEditingController();
-  final TextEditingController _patientNumberController = TextEditingController();
+  final TextEditingController _patientNumberController =
+      TextEditingController();
   String? _selectedMachineId;
   List<Map<String, dynamic>> _machines = [];
 
@@ -351,7 +425,8 @@ class _ScheduleMachineViewState extends State<ScheduleMachineView> {
     });
   }
 
-  void _scheduleMachine(String machineId, String patientName, String patientNumber) async {
+  void _scheduleMachine(
+      String machineId, String patientName, String patientNumber) async {
     final machine = _machines.firstWhere((m) => m['id'] == machineId);
     await _firestoreService.scheduleMachine(
       machineId,
@@ -380,9 +455,9 @@ class _ScheduleMachineViewState extends State<ScheduleMachineView> {
           Text(
             'Schedule a Machine',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: Colors.blueAccent,
-              fontWeight: FontWeight.bold,
-            ),
+                  color: Colors.blueAccent,
+                  fontWeight: FontWeight.bold,
+                ),
           ),
           SizedBox(height: 20),
           DropdownButton<String>(
@@ -452,6 +527,16 @@ class _ScheduledMachinesViewState extends State<ScheduledMachinesView> {
     });
   }
 
+  void _cancelSchedule(String scheduleId, String machineId) async {
+    await _firestoreService.cancelSchedule(scheduleId, machineId);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('Machine schedule canceled and marked as available.'),
+    ));
+    setState(() {
+      _scheduledMachines.removeWhere((machine) => machine['id'] == scheduleId);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -460,38 +545,20 @@ class _ScheduledMachinesViewState extends State<ScheduledMachinesView> {
         itemCount: _scheduledMachines.length,
         itemBuilder: (context, index) {
           final machine = _scheduledMachines[index];
-          return Card(
-            elevation: 5,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15.0),
-            ),
-            child: Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    machine['machineName'],
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: Colors.teal,
-                    ),
-                  ),
-                  SizedBox(height: 10),
-                  Text('Location: ${machine['location']}'),
-                  SizedBox(height: 10),
-                  Text('Patient Name: ${machine['patientName']}'),
-                  SizedBox(height: 10),
-                  Text('Patient Number: ${machine['patientNumber']}'),
-                ],
-              ),
-            ),
+          return schedule_card(
+            machineId: machine['machineId'],
+            machineName: machine['machineName'],
+            location: machine['location'],
+            patientName: machine['patientName'],
+            patientNumber: machine['patientNumber'],
+            onCancel: () =>
+                _cancelSchedule(machine['id'], machine['machineId']),
           );
         },
       ),
     );
   }
 }
-
 
 class schedule_card extends StatelessWidget {
   final String machineId;
@@ -525,8 +592,8 @@ class schedule_card extends StatelessWidget {
             Text(
               machineName,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: Colors.teal,
-              ),
+                    color: Colors.teal,
+                  ),
             ),
             SizedBox(height: 10),
             Text('Location: $location'),
@@ -539,18 +606,6 @@ class schedule_card extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: <Widget>[
-                ElevatedButton.icon(
-                  onPressed: () {
-                    // You should trigger scheduling logic here if needed
-                  },
-                  icon: Icon(Icons.schedule),
-                  label: Text('Schedule'),
-                  style: ElevatedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                    ),
-                  ),
-                ),
                 ElevatedButton.icon(
                   onPressed: onCancel,
                   icon: Icon(Icons.cancel),
@@ -571,3 +626,157 @@ class schedule_card extends StatelessWidget {
   }
 }
 
+// PATIENT WIDGET
+class PatientList extends StatefulWidget {
+  @override
+  _PatientListState createState() => _PatientListState();
+}
+
+class _PatientListState extends State<PatientList> {
+  final FirestoreService _firestoreService = FirestoreService();
+  List<Map<String, dynamic>> _patients = [];
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _ageController = TextEditingController();
+  final TextEditingController _contactController = TextEditingController();
+  final TextEditingController _numberController = TextEditingController();
+  String? _editingPatientId;
+
+  @override
+  void initState() {
+    super.initState();
+    _listenToPatients();
+  }
+
+  void _listenToPatients() {
+    _firestoreService.listenToPatients().listen((patients) {
+      setState(() {
+        _patients = patients;
+      });
+    });
+  }
+
+  void _addOrUpdatePatient() async {
+    final name = _nameController.text;
+    final age = int.tryParse(_ageController.text) ?? 0;
+    final contact = _contactController.text;
+    final number = _numberController.text;
+    if (name.isNotEmpty && age > 0 && contact.isNotEmpty && number.isNotEmpty) {
+      if (_editingPatientId != null) {
+        await _firestoreService.updatePatient(
+            _editingPatientId!, name, age, contact, number);
+        setState(() {
+          _editingPatientId = null;
+        });
+      } else {
+        await _firestoreService.addPatient(name, age, contact, number);
+      }
+      _nameController.clear();
+      _ageController.clear();
+      _contactController.clear();
+      _numberController.clear();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(
+            _editingPatientId == null ? 'Patient Added' : 'Patient Updated'),
+      ));
+    }
+  }
+
+  void _editPatient(
+      String id, String name, int age, String contact, String number) {
+    setState(() {
+      _editingPatientId = id;
+      _nameController.text = name;
+      _ageController.text = age.toString();
+      _contactController.text = contact;
+      _numberController.text = number;
+    });
+  }
+
+  void _deletePatient(String id) async {
+    await _firestoreService.deletePatient(id);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            'Patient List',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: Colors.blueAccent,
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          SizedBox(height: 20),
+          TextField(
+            controller: _nameController,
+            decoration: InputDecoration(labelText: 'Patient Name'),
+          ),
+          SizedBox(height: 10),
+          TextField(
+            controller: _ageController,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(labelText: 'Age'),
+          ),
+          SizedBox(height: 10),
+          TextField(
+            controller: _contactController,
+            decoration: InputDecoration(labelText: 'Contact'),
+          ),
+          SizedBox(height: 10),
+          TextField(
+            controller: _numberController,
+            decoration: InputDecoration(labelText: 'Patient Number'),
+          ),
+          SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: _addOrUpdatePatient,
+            child: Text(
+                _editingPatientId == null ? 'Add Patient' : 'Update Patient'),
+          ),
+          SizedBox(height: 20),
+          Expanded(
+            child: ListView.builder(
+              itemCount: _patients.length,
+              itemBuilder: (context, index) {
+                final patient = _patients[index];
+                return Card(
+                  elevation: 5,
+                  margin: EdgeInsets.symmetric(vertical: 8),
+                  child: ListTile(
+                    title: Text(patient['name']),
+                    subtitle: Text(
+                      'Age: ${patient['age']}\nContact: ${patient['contact']}\nNumber: ${patient['number']}',
+                      style: TextStyle(color: Colors.grey[700]),
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        IconButton(
+                          icon: Icon(Icons.edit),
+                          onPressed: () => _editPatient(
+                              patient['id'],
+                              patient['name'],
+                              patient['age'],
+                              patient['contact'],
+                              patient['number']),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.delete, color: Colors.red),
+                          onPressed: () => _deletePatient(patient['id']),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

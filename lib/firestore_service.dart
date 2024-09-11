@@ -5,6 +5,8 @@ class FirestoreService {
       FirebaseFirestore.instance.collection('machines');
   final CollectionReference scheduleCollection =
       FirebaseFirestore.instance.collection('schedule');
+  final CollectionReference patientsCollection = FirebaseFirestore.instance
+      .collection('patients'); // New collection for patients
 
   // Real-time listener for machine changes
   Stream<List<Map<String, dynamic>>> listenToMachines() {
@@ -67,6 +69,16 @@ class FirestoreService {
     }
   }
 
+  // Delete a machine from Firestore
+  Future<void> deleteMachine(String id) async {
+    try {
+      await machinesCollection.doc(id).delete();
+      print('Machine deleted from Firestore');
+    } catch (e) {
+      print('Error deleting machine: $e');
+    }
+  }
+
   // Update machine availability
   Future<void> updateMachineAvailability(String id, bool isAvailable) async {
     try {
@@ -110,6 +122,63 @@ class FirestoreService {
       });
     } catch (e) {
       print('Error canceling schedule: $e');
+    }
+  }
+
+  // Real-time listener for patient changes
+  Stream<List<Map<String, dynamic>>> listenToPatients() {
+    return patientsCollection.snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) {
+        return {
+          'id': doc.id,
+          'name': doc['name'],
+          'age': doc['age'],
+          'contact': doc['contact'],
+          'number': doc['number'],
+        };
+      }).toList();
+    });
+  }
+
+  // Add a new patient to Firestore
+  Future<void> addPatient(
+      String name, int age, String contact, String number) async {
+    try {
+      await patientsCollection.add({
+        'name': name,
+        'age': age,
+        'contact': contact,
+        'number': number,
+      });
+      print('Patient added to Firestore');
+    } catch (e) {
+      print('Error adding patient: $e');
+    }
+  }
+
+  // Update patient details
+  Future<void> updatePatient(
+      String id, String name, int age, String contact, String number) async {
+    try {
+      await patientsCollection.doc(id).update({
+        'name': name,
+        'age': age,
+        'contact': contact,
+        'number': number,
+      });
+      print('Patient updated in Firestore');
+    } catch (e) {
+      print('Error updating patient: $e');
+    }
+  }
+
+  // Delete a patient from Firestore
+  Future<void> deletePatient(String id) async {
+    try {
+      await patientsCollection.doc(id).delete();
+      print('Patient deleted from Firestore');
+    } catch (e) {
+      print('Error deleting patient: $e');
     }
   }
 }
