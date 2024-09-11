@@ -41,6 +41,11 @@ class MyApp extends StatelessWidget {
 }
 
 class home_screen extends StatelessWidget {
+  void _handlePatientSelected(String name, String number) {
+    // Handle the selected patient
+    print('Selected patient: $name, $number');
+  }
+
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
@@ -60,7 +65,9 @@ class home_screen extends StatelessWidget {
           children: [
             DashboardScreen(),
             ScheduleScreen(),
-            PatientList(), // New Widget
+            PatientList(
+              onPatientSelected: _handlePatientSelected,
+            ),
           ],
         ),
       ),
@@ -445,6 +452,13 @@ class _ScheduleMachineViewState extends State<ScheduleMachineView> {
     });
   }
 
+  void _selectPatient(String name, String number) {
+    setState(() {
+      _patientNameController.text = name;
+      _patientNumberController.text = number;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -459,6 +473,16 @@ class _ScheduleMachineViewState extends State<ScheduleMachineView> {
                   fontWeight: FontWeight.bold,
                 ),
           ),
+          // SizedBox(height: 20),
+          // TextField(
+          //   controller: _patientNameController,
+          //   decoration: InputDecoration(labelText: 'Patient Name'),
+          // ),
+          // SizedBox(height: 10),
+          // TextField(
+          //   controller: _patientNumberController,
+          //   decoration: InputDecoration(labelText: 'Patient Number'),
+          // ),
           SizedBox(height: 20),
           DropdownButton<String>(
             value: _selectedMachineId,
@@ -476,14 +500,18 @@ class _ScheduleMachineViewState extends State<ScheduleMachineView> {
             },
           ),
           SizedBox(height: 20),
-          TextField(
-            controller: _patientNameController,
-            decoration: InputDecoration(labelText: 'Patient Name'),
-          ),
-          SizedBox(height: 10),
-          TextField(
-            controller: _patientNumberController,
-            decoration: InputDecoration(labelText: 'Patient Number'),
+          ElevatedButton(
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                builder: (context) {
+                  return PatientList(
+                    onPatientSelected: _selectPatient,
+                  );
+                },
+              );
+            },
+            child: Text('Select Patient'),
           ),
           SizedBox(height: 20),
           ElevatedButton(
@@ -503,6 +531,7 @@ class _ScheduleMachineViewState extends State<ScheduleMachineView> {
     );
   }
 }
+
 
 class ScheduledMachinesView extends StatefulWidget {
   @override
@@ -628,6 +657,10 @@ class schedule_card extends StatelessWidget {
 
 // PATIENT WIDGET
 class PatientList extends StatefulWidget {
+  final Function(String name, String number) onPatientSelected;
+
+  PatientList({required this.onPatientSelected});
+
   @override
   _PatientListState createState() => _PatientListState();
 }
@@ -767,6 +800,14 @@ class _PatientListState extends State<PatientList> {
                         IconButton(
                           icon: Icon(Icons.delete, color: Colors.red),
                           onPressed: () => _deletePatient(patient['id']),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.check, color: Colors.green),
+                          onPressed: () {
+                            widget.onPatientSelected(
+                                patient['name'], patient['number']);
+                            Navigator.pop(context);
+                          },
                         ),
                       ],
                     ),
