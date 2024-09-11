@@ -56,7 +56,7 @@ class home_screen extends StatelessWidget {
         body: TabBarView(
           children: [
             DashboardScreen(),
-            schedule_screen(),
+            ScheduleScreen(),
           ],
         ),
       ),
@@ -120,155 +120,6 @@ class DashboardView extends StatefulWidget {
   _DashboardViewState createState() => _DashboardViewState();
 }
 
-// class _DashboardViewState extends State<DashboardView> {
-//   FirestoreService _firestoreService = FirestoreService();
-//   List<Map<String, dynamic>> availableMachines = [];
-
-//   @override
-//   void initState() {
-//     super.initState();
-//     _fetchMachines();
-//   }
-
-//   // Fetch machines from Firestore and update state
-//   void _fetchMachines() async {
-//     List<Map<String, dynamic>> machines = await _firestoreService.fetchMachines();
-//     setState(() {
-//       availableMachines = machines;
-//     });
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Card(
-//       elevation: 5,
-//       shape: RoundedRectangleBorder(
-//         borderRadius: BorderRadius.circular(15.0),
-//       ),
-//       child: Padding(
-//         padding: EdgeInsets.all(16.0),
-//         child: Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: <Widget>[
-//             Text(
-//               'Total Machines: ${availableMachines.length}',
-//               style: TextStyle(
-//                 fontSize: 18,
-//                 fontWeight: FontWeight.bold,
-//               ),
-//             ),
-//             SizedBox(height: 10),
-//             Text(
-//               'Free Machines: ${availableMachines.length}', // Adjust based on logic
-//               style: TextStyle(
-//                 fontSize: 16,
-//                 color: Colors.green,
-//               ),
-//             ),
-//             SizedBox(height: 10),
-//             Divider(),
-//             availableMachines.isNotEmpty
-//                 ? ListView.builder(
-//                     shrinkWrap: true,
-//                     physics: NeverScrollableScrollPhysics(),
-//                     itemCount: availableMachines.length,
-//                     itemBuilder: (context, index) {
-//                       return Padding(
-//                         padding: EdgeInsets.symmetric(vertical: 4.0),
-//                         child: Row(
-//                           children: [
-//                             Icon(Icons.local_hospital, color: Colors.teal),
-//                             SizedBox(width: 8),
-//                             Text('${availableMachines[index]['name']} - ${availableMachines[index]['location']}'),
-//                           ],
-//                         ),
-//                       );
-//                     },
-//                   )
-//                 : Center(child: CircularProgressIndicator()), // Show loader while fetching
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-// }
-
-// class _DashboardViewState extends State<DashboardView> {
-//   FirestoreService _firestoreService = FirestoreService();
-//   List<Map<String, dynamic>> availableMachines = [];
-//   List<Map<String, dynamic>> nonAvailableMachines = [];
-
-//   @override
-//   void initState() {
-//     super.initState();
-//     _fetchMachines();
-//   }
-
-//   // Fetch machines from Firestore and separate available/non-available
-//   void _fetchMachines() async {
-//     List<Map<String, dynamic>> machines = await _firestoreService.fetchMachines();
-//     setState(() {
-//       availableMachines = machines.where((m) => m['available'] == true).toList();
-//       nonAvailableMachines = machines.where((m) => m['available'] == false).toList();
-//     });
-//   }
-
-//   // Toggle availability of a machine
-//   void _toggleAvailability(String id, bool isCurrentlyAvailable) async {
-//     await _firestoreService.updateMachineAvailability(id, !isCurrentlyAvailable);
-//     _fetchMachines(); // Refresh the list after updating
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Column(
-//       crossAxisAlignment: CrossAxisAlignment.start,
-//       children: [
-//         Text(
-//           'Available Machines: ${availableMachines.length}',
-//           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green),
-//         ),
-//         SizedBox(height: 10),
-//         _buildMachineList(availableMachines, true), // Display available machines
-
-//         SizedBox(height: 20), // Separation between available and non-available
-
-//         Text(
-//           'Non-Available Machines: ${nonAvailableMachines.length}',
-//           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red),
-//         ),
-//         SizedBox(height: 10),
-//         _buildMachineList(nonAvailableMachines, false), // Display non-available machines
-//       ],
-//     );
-//   }
-
-//   Widget _buildMachineList(List<Map<String, dynamic>> machines, bool isAvailable) {
-//     return machines.isNotEmpty
-//         ? ListView.builder(
-//             shrinkWrap: true,
-//             physics: NeverScrollableScrollPhysics(),
-//             itemCount: machines.length,
-//             itemBuilder: (context, index) {
-//               return Card(
-//                 elevation: 3,
-//                 margin: EdgeInsets.symmetric(vertical: 8),
-//                 child: ListTile(
-//                   leading: Icon(Icons.local_hospital, color: isAvailable ? Colors.teal : Colors.grey),
-//                   title: Text('${machines[index]['name']} - ${machines[index]['location']}'),
-//                   trailing: Switch(
-//                     value: isAvailable,
-//                     onChanged: (value) => _toggleAvailability(machines[index]['id'], isAvailable),
-//                     activeColor: Colors.green,
-//                     inactiveThumbColor: Colors.red,
-//                   ),
-//                 ),
-//               );
-//             },
-//           )
-//         : Center(child: Text('No machines found.'));
-//   }
-// }
 class _DashboardViewState extends State<DashboardView> {
   FirestoreService _firestoreService = FirestoreService();
   List<Map<String, dynamic>> availableMachines = [];
@@ -432,9 +283,93 @@ class _AddMachineState extends State<AddMachine> {
   }
 }
 
+//SCHEDULING
 
+class ScheduleScreen extends StatefulWidget {
+  @override
+  _ScheduleScreenState createState() => _ScheduleScreenState();
+}
 
-class schedule_screen extends StatelessWidget {
+class _ScheduleScreenState extends State<ScheduleScreen> {
+  bool _isScheduling = true;
+
+  // Function to toggle between scheduling and viewing scheduled machines
+  void _toggleView() {
+    setState(() {
+      _isScheduling = !_isScheduling;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('Schedule Machines'),
+          bottom: TabBar(
+            tabs: [
+              Tab(text: 'Schedule Machine'),
+              Tab(text: 'Scheduled Machines'),
+            ],
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            ScheduleMachineView(),
+            ScheduledMachinesView(),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class ScheduleMachineView extends StatefulWidget {
+  @override
+  _ScheduleMachineViewState createState() => _ScheduleMachineViewState();
+}
+
+class _ScheduleMachineViewState extends State<ScheduleMachineView> {
+  final FirestoreService _firestoreService = FirestoreService();
+  final TextEditingController _patientNameController = TextEditingController();
+  final TextEditingController _patientNumberController = TextEditingController();
+  String? _selectedMachineId;
+  List<Map<String, dynamic>> _machines = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchMachines();
+  }
+
+  void _fetchMachines() async {
+    _firestoreService.listenToMachines().listen((machines) {
+      setState(() {
+        _machines = machines.where((m) => m['available'] == true).toList();
+      });
+    });
+  }
+
+  void _scheduleMachine(String machineId, String patientName, String patientNumber) async {
+    final machine = _machines.firstWhere((m) => m['id'] == machineId);
+    await _firestoreService.scheduleMachine(
+      machineId,
+      machine['name'],
+      machine['location'],
+      patientName,
+      patientNumber,
+    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('Machine Scheduled Successfully!'),
+    ));
+    setState(() {
+      _selectedMachineId = null;
+      _patientNameController.clear();
+      _patientNumberController.clear();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -443,50 +378,50 @@ class schedule_screen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
-            'Schedule or Cancel a Machine',
+            'Schedule a Machine',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               color: Colors.blueAccent,
               fontWeight: FontWeight.bold,
             ),
           ),
           SizedBox(height: 20),
-          Expanded(
-            child: ListView(
-              children: <Widget>[
-                schedule_card(
-                  machine_name: 'Machine 1',
-                  location: 'Room 101',
-                ),
-                schedule_card(
-                  machine_name: 'Machine 2',
-                  location: 'Room 102',
-                ),
-                schedule_card(
-                  machine_name: 'Machine 3',
-                  location: 'Room 103',
-                ),
-                schedule_card(
-                  machine_name: 'Machine 4',
-                  location: 'Room 104',
-                ),
-                schedule_card(
-                  machine_name: 'Machine 5',
-                  location: 'Room 105',
-                ),
-                schedule_card(
-                  machine_name: 'Machine 6',
-                  location: 'Room 106',
-                ),
-                schedule_card(
-                  machine_name: 'Machine 7',
-                  location: 'Room 107',
-                ),
-                schedule_card(
-                  machine_name: 'Machine 8',
-                  location: 'Room 108',
-                ),
-              ],
-            ),
+          DropdownButton<String>(
+            value: _selectedMachineId,
+            hint: Text('Select Machine'),
+            items: _machines.map((machine) {
+              return DropdownMenuItem<String>(
+                value: machine['id'],
+                child: Text('${machine['name']} - ${machine['location']}'),
+              );
+            }).toList(),
+            onChanged: (value) {
+              setState(() {
+                _selectedMachineId = value;
+              });
+            },
+          ),
+          SizedBox(height: 20),
+          TextField(
+            controller: _patientNameController,
+            decoration: InputDecoration(labelText: 'Patient Name'),
+          ),
+          SizedBox(height: 10),
+          TextField(
+            controller: _patientNumberController,
+            decoration: InputDecoration(labelText: 'Patient Number'),
+          ),
+          SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: _selectedMachineId != null &&
+                    _patientNameController.text.isNotEmpty &&
+                    _patientNumberController.text.isNotEmpty
+                ? () => _scheduleMachine(
+                      _selectedMachineId!,
+                      _patientNameController.text,
+                      _patientNumberController.text,
+                    )
+                : null,
+            child: Text('Schedule Machine'),
           ),
         ],
       ),
@@ -494,13 +429,85 @@ class schedule_screen extends StatelessWidget {
   }
 }
 
+class ScheduledMachinesView extends StatefulWidget {
+  @override
+  _ScheduledMachinesViewState createState() => _ScheduledMachinesViewState();
+}
+
+class _ScheduledMachinesViewState extends State<ScheduledMachinesView> {
+  final FirestoreService _firestoreService = FirestoreService();
+  List<Map<String, dynamic>> _scheduledMachines = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _listenToScheduledMachines();
+  }
+
+  void _listenToScheduledMachines() {
+    _firestoreService.listenToScheduledMachines().listen((machines) {
+      setState(() {
+        _scheduledMachines = machines;
+      });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.all(16.0),
+      child: ListView.builder(
+        itemCount: _scheduledMachines.length,
+        itemBuilder: (context, index) {
+          final machine = _scheduledMachines[index];
+          return Card(
+            elevation: 5,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15.0),
+            ),
+            child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    machine['machineName'],
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: Colors.teal,
+                    ),
+                  ),
+                  SizedBox(height: 10),
+                  Text('Location: ${machine['location']}'),
+                  SizedBox(height: 10),
+                  Text('Patient Name: ${machine['patientName']}'),
+                  SizedBox(height: 10),
+                  Text('Patient Number: ${machine['patientNumber']}'),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+
 class schedule_card extends StatelessWidget {
-  final String machine_name;
+  final String machineId;
+  final String machineName;
   final String location;
+  final String? patientName;
+  final String? patientNumber;
+  final VoidCallback onCancel;
 
   schedule_card({
-    required this.machine_name,
+    required this.machineId,
+    required this.machineName,
     required this.location,
+    this.patientName,
+    this.patientNumber,
+    required this.onCancel,
   });
 
   @override
@@ -516,7 +523,7 @@ class schedule_card extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Text(
-              machine_name,
+              machineName,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 color: Colors.teal,
               ),
@@ -524,11 +531,18 @@ class schedule_card extends StatelessWidget {
             SizedBox(height: 10),
             Text('Location: $location'),
             SizedBox(height: 10),
+            if (patientName != null && patientNumber != null) ...[
+              Text('Patient: $patientName'),
+              Text('Contact: $patientNumber'),
+            ],
+            SizedBox(height: 10),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: <Widget>[
                 ElevatedButton.icon(
-                  onPressed: () {},
+                  onPressed: () {
+                    // You should trigger scheduling logic here if needed
+                  },
                   icon: Icon(Icons.schedule),
                   label: Text('Schedule'),
                   style: ElevatedButton.styleFrom(
@@ -538,7 +552,7 @@ class schedule_card extends StatelessWidget {
                   ),
                 ),
                 ElevatedButton.icon(
-                  onPressed: () {},
+                  onPressed: onCancel,
                   icon: Icon(Icons.cancel),
                   label: Text('Cancel'),
                   style: ElevatedButton.styleFrom(
@@ -556,3 +570,4 @@ class schedule_card extends StatelessWidget {
     );
   }
 }
+

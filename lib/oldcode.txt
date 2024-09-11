@@ -300,3 +300,210 @@
 //     );
 //   }
 // }
+
+// class _DashboardViewState extends State<DashboardView> {
+//   FirestoreService _firestoreService = FirestoreService();
+//   List<Map<String, dynamic>> availableMachines = [];
+
+//   @override
+//   void initState() {
+//     super.initState();
+//     _fetchMachines();
+//   }
+
+//   // Fetch machines from Firestore and update state
+//   void _fetchMachines() async {
+//     List<Map<String, dynamic>> machines = await _firestoreService.fetchMachines();
+//     setState(() {
+//       availableMachines = machines;
+//     });
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return Card(
+//       elevation: 5,
+//       shape: RoundedRectangleBorder(
+//         borderRadius: BorderRadius.circular(15.0),
+//       ),
+//       child: Padding(
+//         padding: EdgeInsets.all(16.0),
+//         child: Column(
+//           crossAxisAlignment: CrossAxisAlignment.start,
+//           children: <Widget>[
+//             Text(
+//               'Total Machines: ${availableMachines.length}',
+//               style: TextStyle(
+//                 fontSize: 18,
+//                 fontWeight: FontWeight.bold,
+//               ),
+//             ),
+//             SizedBox(height: 10),
+//             Text(
+//               'Free Machines: ${availableMachines.length}', // Adjust based on logic
+//               style: TextStyle(
+//                 fontSize: 16,
+//                 color: Colors.green,
+//               ),
+//             ),
+//             SizedBox(height: 10),
+//             Divider(),
+//             availableMachines.isNotEmpty
+//                 ? ListView.builder(
+//                     shrinkWrap: true,
+//                     physics: NeverScrollableScrollPhysics(),
+//                     itemCount: availableMachines.length,
+//                     itemBuilder: (context, index) {
+//                       return Padding(
+//                         padding: EdgeInsets.symmetric(vertical: 4.0),
+//                         child: Row(
+//                           children: [
+//                             Icon(Icons.local_hospital, color: Colors.teal),
+//                             SizedBox(width: 8),
+//                             Text('${availableMachines[index]['name']} - ${availableMachines[index]['location']}'),
+//                           ],
+//                         ),
+//                       );
+//                     },
+//                   )
+//                 : Center(child: CircularProgressIndicator()), // Show loader while fetching
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+// }
+
+// class _DashboardViewState extends State<DashboardView> {
+//   FirestoreService _firestoreService = FirestoreService();
+//   List<Map<String, dynamic>> availableMachines = [];
+//   List<Map<String, dynamic>> nonAvailableMachines = [];
+
+//   @override
+//   void initState() {
+//     super.initState();
+//     _fetchMachines();
+//   }
+
+//   // Fetch machines from Firestore and separate available/non-available
+//   void _fetchMachines() async {
+//     List<Map<String, dynamic>> machines = await _firestoreService.fetchMachines();
+//     setState(() {
+//       availableMachines = machines.where((m) => m['available'] == true).toList();
+//       nonAvailableMachines = machines.where((m) => m['available'] == false).toList();
+//     });
+//   }
+
+//   // Toggle availability of a machine
+//   void _toggleAvailability(String id, bool isCurrentlyAvailable) async {
+//     await _firestoreService.updateMachineAvailability(id, !isCurrentlyAvailable);
+//     _fetchMachines(); // Refresh the list after updating
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return Column(
+//       crossAxisAlignment: CrossAxisAlignment.start,
+//       children: [
+//         Text(
+//           'Available Machines: ${availableMachines.length}',
+//           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green),
+//         ),
+//         SizedBox(height: 10),
+//         _buildMachineList(availableMachines, true), // Display available machines
+
+//         SizedBox(height: 20), // Separation between available and non-available
+
+//         Text(
+//           'Non-Available Machines: ${nonAvailableMachines.length}',
+//           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red),
+//         ),
+//         SizedBox(height: 10),
+//         _buildMachineList(nonAvailableMachines, false), // Display non-available machines
+//       ],
+//     );
+//   }
+
+//   Widget _buildMachineList(List<Map<String, dynamic>> machines, bool isAvailable) {
+//     return machines.isNotEmpty
+//         ? ListView.builder(
+//             shrinkWrap: true,
+//             physics: NeverScrollableScrollPhysics(),
+//             itemCount: machines.length,
+//             itemBuilder: (context, index) {
+//               return Card(
+//                 elevation: 3,
+//                 margin: EdgeInsets.symmetric(vertical: 8),
+//                 child: ListTile(
+//                   leading: Icon(Icons.local_hospital, color: isAvailable ? Colors.teal : Colors.grey),
+//                   title: Text('${machines[index]['name']} - ${machines[index]['location']}'),
+//                   trailing: Switch(
+//                     value: isAvailable,
+//                     onChanged: (value) => _toggleAvailability(machines[index]['id'], isAvailable),
+//                     activeColor: Colors.green,
+//                     inactiveThumbColor: Colors.red,
+//                   ),
+//                 ),
+//               );
+//             },
+//           )
+//         : Center(child: Text('No machines found.'));
+//   }
+// }
+
+
+// class schedule_screen extends StatelessWidget {
+//   @override
+//   Widget build(BuildContext context) {
+//     final FirestoreService firestoreService = FirestoreService();
+
+//     return Padding(
+//       padding: EdgeInsets.all(16.0),
+//       child: Column(
+//         crossAxisAlignment: CrossAxisAlignment.start,
+//         children: <Widget>[
+//           Text(
+//             'Schedule or Cancel a Machine',
+//             style: Theme.of(context).textTheme.titleLarge?.copyWith(
+//               color: Colors.blueAccent,
+//               fontWeight: FontWeight.bold,
+//             ),
+//           ),
+//           SizedBox(height: 20),
+//           Expanded(
+//             child: StreamBuilder<List<Map<String, dynamic>>>(
+//               stream: firestoreService.listenToScheduledMachines(),
+//               builder: (context, snapshot) {
+//                 if (snapshot.connectionState == ConnectionState.waiting) {
+//                   return Center(child: CircularProgressIndicator());
+//                 } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+//                   return Center(child: Text('No scheduled machines.'));
+//                 } else {
+//                   final scheduledMachines = snapshot.data!;
+
+//                   return ListView.builder(
+//                     itemCount: scheduledMachines.length,
+//                     itemBuilder: (context, index) {
+//                       final machine = scheduledMachines[index];
+//                       return schedule_card(
+//                         machineId: machine['id'],
+//                         machineName: machine['machineName'],
+//                         location: machine['location'],
+//                         patientName: machine['patientName'],
+//                         patientNumber: machine['patientNumber'],
+//                         onCancel: () => firestoreService.cancelSchedule(
+//                           machine['id'],
+//                           machine['machineId'],
+//                         ),
+//                       );
+//                     },
+//                   );
+//                 }
+//               },
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }
